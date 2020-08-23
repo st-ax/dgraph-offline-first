@@ -6,9 +6,8 @@ import {
     // isConflictError,
     stringifyMessage,
 } from "./util";
+import isOnline from "is-online";
 
-
-const isOffline = false;
 /**
  * Txn is a single atomic transaction.
  *
@@ -47,6 +46,9 @@ export class OfflineTxn {
         };
     }
 
+    public async isOnline(){
+        return await isOnline();
+    }
     /**
      * query sends a query to one of the connected Dgraph instances. If no mutations
      * need to be made in the same transaction, it's convenient to chain the method,
@@ -113,12 +115,12 @@ export class OfflineTxn {
      * operations on it will fail.
      */
     public async mutate(mu: Mutation): Promise<Assigned> {
-        if (isOffline){
-            console.log("offline txn isOffline saving mutation to queue");
-            return this.dcTxn.mutate({});
-        } else {
+        if (await this.isOnline()){
             console.log("offline txn online running mutation...");
             return this.dcTxn.mutate(mu);
+        } else {
+            console.log("offline txn isOffline saving mutation to queue");
+            return this.dcTxn.mutate({});
         }
     }
 

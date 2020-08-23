@@ -7,6 +7,7 @@ export declare class OfflineTxn {
     private finished;
     private readonly mutated;
     constructor(dc: DgraphClient, options?: TxnOptions);
+    isOnline(): Promise<boolean>;
     query(q: string, options?: {
         debug?: boolean;
     }): Promise<Response>;
