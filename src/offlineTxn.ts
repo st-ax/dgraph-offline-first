@@ -1,12 +1,14 @@
-import { DgraphClient } from "dgraph-js-http";
+import { DgraphClient, Txn } from "dgraph-js-http";
 import { Assigned, Mutation, Request, Response, TxnContext, TxnOptions } from "dgraph-js-http/lib/types";
 import { ERR_ABORTED, ERR_BEST_EFFORT_REQUIRED_READ_ONLY, ERR_FINISHED } from "./errors";
 import {
     isAbortedError,
-    isConflictError,
+    // isConflictError,
     stringifyMessage,
 } from "./util";
 
+
+const isOffline = false;
 /**
  * Txn is a single atomic transaction.
  *
@@ -23,13 +25,14 @@ import {
  */
 export class OfflineTxn {
     private readonly dc: DgraphClient;
+    private readonly dcTxn: Txn;
     private readonly ctx: TxnContext;
     private finished: boolean = false;
-    private mutated: boolean = false;
+    private readonly mutated: boolean = false;
 
     public constructor(dc: DgraphClient,  options: TxnOptions = {}) {
         this.dc = dc;
-
+        this.dcTxn = dc.newTxn();
         if (options.bestEffort && !options.readOnly) {
             this.dc.debug("Client attempted to query using best-effort without setting the transaction to read-only");
             throw ERR_BEST_EFFORT_REQUIRED_READ_ONLY;
@@ -110,40 +113,12 @@ export class OfflineTxn {
      * operations on it will fail.
      */
     public async mutate(mu: Mutation): Promise<Assigned> {
-        if (this.finished) {
-            this.dc.debug(`Mutate request (ERR_FINISHED):\nmutation = ${stringifyMessage(mu)}`);
-            throw ERR_FINISHED;
-        }
-
-        this.mutated = true;
-        mu.startTs = this.ctx.start_ts;
-        this.dc.debug(`Mutate request:\n${stringifyMessage(mu)}`);
-
-        const c = this.dc.anyClient();
-        try {
-            const ag = await c.mutate(mu);
-            if (mu.commitNow) {
-                this.finished = true;
-            }
-
-            this.mergeContext(ag.extensions.txn);
-            this.dc.debug(`Mutate response:\n${stringifyMessage(ag)}`);
-
-            return ag;
-        } catch (e) {
-            // Since a mutation error occurred, the txn should no longer be used (some
-            // mutations could have applied but not others, but we don't know which ones).
-            // Discarding the transaction enforces that the user cannot use the txn further.
-            try {
-                await this.discard();
-            } catch (e) {
-                // Ignore error - user should see the original error.
-            }
-
-            // Transaction could be aborted(status.ABORTED) if commitNow was true, or server
-            // could send a message that this mutation conflicts(status.FAILED_PRECONDITION)
-            // with another transaction.
-            throw (isAbortedError(e) || isConflictError(e)) ? ERR_ABORTED : e;
+        if (isOffline){
+            console.log("offline txn isOffline saving mutation to queue");
+            return this.dcTxn.mutate({});
+        } else {
+            console.log("offline txn online running mutation...");
+            return this.dcTxn.mutate(mu);
         }
     }
 

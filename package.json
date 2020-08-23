@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@typescript-eslint/eslint-plugin-tslint": "^3.9.1",
+    "core-js": "^3.6.5",
     "dgraph-js-http": "^20.7.1-rc1",
     "tslint": "^6.1.3"
   },
