@@ -1,6 +1,6 @@
-import { DgraphClient } from "./client";
+import { DgraphClient } from "dgraph-js-http";
+import { Assigned, Mutation, Request, Response, TxnContext, TxnOptions } from "dgraph-js-http/lib/types";
 import { ERR_ABORTED, ERR_BEST_EFFORT_REQUIRED_READ_ONLY, ERR_FINISHED } from "./errors";
-import { Assigned, Mutation, Request, Response, TxnContext, TxnOptions } from "./types";
 import {
     isAbortedError,
     isConflictError,
@@ -21,13 +21,13 @@ import {
  * is a no-op if commit has already been called, so it's safe to call discard
  * after calling commit.
  */
-export class Txn {
+export class OfflineTxn {
     private readonly dc: DgraphClient;
     private readonly ctx: TxnContext;
     private finished: boolean = false;
     private mutated: boolean = false;
 
-    constructor(dc: DgraphClient, options: TxnOptions = {}) {
+    public constructor(dc: DgraphClient,  options: TxnOptions = {}) {
         this.dc = dc;
 
         if (options.bestEffort && !options.readOnly) {
@@ -36,11 +36,11 @@ export class Txn {
         }
 
         this.ctx = {
-          start_ts: 0,
-          keys: [],
-          preds: [],
-          readOnly: options.readOnly,
-          bestEffort: options.bestEffort,
+            start_ts: 0,
+            keys: [],
+            preds: [],
+            readOnly: options.readOnly,
+            bestEffort: options.bestEffort,
         };
     }
 
